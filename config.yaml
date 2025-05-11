@@ -1,0 +1,17 @@
+filter: ""
+interfaces:
+    include:
+        name: 
+            - ""
+        ipaddress:
+            - ""
+output:
+    file:
+        enabled: true
+        maxFileSize: 1024
+        filePath: "./"
+    api:
+        enabled: false
+        url: ""
+        headers:
+            X-SEKOIAIO-INTAKE-KEY: ""
