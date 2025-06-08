@@ -63,10 +63,13 @@ interfaces:
 
 ## Compilation instructions
 
+this program requires libpcap-dev on linux systems
+
 You are not familiar with Go?
 * Download the latest build at: https://go.dev/
 * Git clone this repository
 * run *go build -ldflags="-s -w" -o .* to compile it
+ 
 
 ## Last commit update
 * Refactor configuration management and logging
