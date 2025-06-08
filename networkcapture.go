@@ -257,51 +257,56 @@ func filterInterfaces(devices []pcap.Interface, include InterfaceParams) ([]pcap
 	}
 
 	for _, device := range devices {
-		for _, name := range *include.Name {
-			if len(name) == 0 {
-				continue
-			}
 
-			if strings.HasPrefix(name, "/") && strings.HasSuffix(name, "/") {
-				// Regular expression match
-				regex, err := regexp.Compile(strings.Trim(name, "/"))
-				if err != nil {
-					return nil, fmt.Errorf("invalid regular expression '%s': %v", name, err)
+		if include.Name != nil {
+			for _, name := range *include.Name {
+				if len(name) == 0 {
+					continue
 				}
 
-				if regex.MatchString(device.Name) || regex.MatchString(device.Description) {
-					filteredDevices = append(filteredDevices, device)
-				}
-			} else {
-				if strings.Contains(device.Name, name) || strings.Contains(device.Description, name) {
-					filteredDevices = append(filteredDevices, device)
+				if strings.HasPrefix(name, "/") && strings.HasSuffix(name, "/") {
+					// Regular expression match
+					regex, err := regexp.Compile(strings.Trim(name, "/"))
+					if err != nil {
+						return nil, fmt.Errorf("invalid regular expression '%s': %v", name, err)
+					}
+
+					if regex.MatchString(device.Name) || regex.MatchString(device.Description) {
+						filteredDevices = append(filteredDevices, device)
+					}
+				} else {
+					if strings.Contains(device.Name, name) || strings.Contains(device.Description, name) {
+						filteredDevices = append(filteredDevices, device)
+					}
 				}
 			}
 		}
 
-		for _, ip := range *include.IPAddress {
-			if len(ip) == 0 {
-				continue
-			}
-
-			for _, addr := range device.Addresses {
-
-				if strings.HasPrefix(ip, "/") && strings.HasSuffix(ip, "/") {
-					// Regular expression match
-					regex, err := regexp.Compile(strings.Trim(ip, "/"))
-					if err != nil {
-						return nil, fmt.Errorf("invalid regular expression '%s': %v", ip, err)
-					}
-
-					if regex.MatchString(addr.IP.String()) {
-						filteredDevices = append(filteredDevices, device)
-					}
-				} else {
-					if strings.Contains(addr.IP.String(), ip) {
-						filteredDevices = append(filteredDevices, device)
-					}
+		if include.IPAddress != nil {
+			for _, ip := range *include.IPAddress {
+				if len(ip) == 0 {
+					continue
 				}
 
+				for _, addr := range device.Addresses {
+
+					if strings.HasPrefix(ip, "/") && strings.HasSuffix(ip, "/") {
+						// Regular expression match
+						regex, err := regexp.Compile(strings.Trim(ip, "/"))
+						if err != nil {
+							return nil, fmt.Errorf("invalid regular expression '%s': %v", ip, err)
+						}
+
+						if regex.MatchString(addr.IP.String()) {
+							filteredDevices = append(filteredDevices, device)
+						}
+					} else {
+						if strings.Contains(addr.IP.String(), ip) {
+							filteredDevices = append(filteredDevices, device)
+						}
+					}
+
+				}
 			}
 		}
 	}
