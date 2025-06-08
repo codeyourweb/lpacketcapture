@@ -18,17 +18,17 @@ type Config struct {
 }
 
 type InterfaceParams struct {
-	Description string   `yaml:"capture_description"`
-	Name        []string `yaml:"interface_name"`
-	Promiscuous bool     `yaml:"promiscuous"`
-	Filter      string   `yaml:"bpf_filter"`
-	IPAddress   []string `yaml:"ipaddress"`
-	Output      Output   `yaml:"output"`
+	Description string    `yaml:"capture_description"`
+	Promiscuous bool      `yaml:"promiscuous"`
+	Name        *[]string `yaml:"interface_name"`
+	IPAddress   *[]string `yaml:"ipaddress"`
+	Filter      *string   `yaml:"bpf_filter"`
+	Output      Output    `yaml:"output"`
 }
 
 type Output struct {
-	File FileOutput `yaml:"file"`
-	API  APIOutput  `yaml:"api"`
+	File *FileOutput `yaml:"file"`
+	API  *APIOutput  `yaml:"http"`
 }
 
 type FileOutput struct {

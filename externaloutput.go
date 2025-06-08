@@ -5,7 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcapgo"
+	"github.com/gosimple/slug"
 )
 
 var messagesQueue = []normalizedPacketInformation{}
@@ -75,4 +80,23 @@ func sendPacketToUrlAddress(url string, headers *map[string]string) error {
 	}
 
 	return nil
+}
+
+func createPCAPFile(interfaceDescription string, pcapFilePath string, linkType layers.LinkType) (*os.File, *pcapgo.Writer, error) {
+	slugDescription := slug.Make(interfaceDescription)
+
+	filename := fmt.Sprintf("%s/%s-%s.pcap", pcapFilePath, slugDescription, time.Now().Format("20060102150405"))
+	pcapFile, err := os.Create(filename)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating pcap file - %v", err)
+	}
+
+	pcapWriter := pcapgo.NewWriter(pcapFile)
+	err = pcapWriter.WriteFileHeader(1024, linkType)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("writing pcap file header - %v", err)
+	}
+
+	return pcapFile, pcapWriter, nil
 }

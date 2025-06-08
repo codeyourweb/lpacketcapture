@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/pcapgo"
-	"github.com/gosimple/slug"
 )
 
 type listeningInterface struct {
@@ -18,6 +18,91 @@ type listeningInterface struct {
 	device       pcap.Interface
 	handle       *pcap.Handle
 	packetsource *gopacket.PacketSource
+}
+
+func networkCaptureRoutine(quitService chan struct{}) {
+	// network interfaces listing
+	logMessage(LOGLEVEL_INFO, "Starting network interfaces enumeration...")
+	devices, err := listNetworkInterfaces()
+	if err != nil {
+		logMessage(LOGLEVEL_ERROR, fmt.Sprintf("Listing network interfaces - %v", err))
+		return
+	}
+
+	if len(devices) == 0 {
+		logMessage(LOGLEVEL_ERROR, "No network interfaces found.")
+		return
+	}
+
+	logMessage(LOGLEVEL_DEBUG, "Available network interfaces:")
+	for _, device := range devices {
+		logMessage(LOGLEVEL_DEBUG, fmt.Sprintf("%s\n", getInterfaceFullName(device)))
+	}
+
+	for _, configInterface := range AppConfig.Interfaces {
+		// interface filtering
+		filteredInterfaces, err := filterInterfaces(devices, configInterface)
+		if err != nil {
+			logMessage(LOGLEVEL_ERROR, fmt.Sprintf("%s : Filtering network interfaces - %v", configInterface.Description, err))
+			return
+		}
+
+		if len(filteredInterfaces) == 0 {
+			logMessage(LOGLEVEL_ERROR, fmt.Sprintf("%s : No network interfaces to listen.", configInterface.Description))
+			return
+		}
+
+		logMessage(LOGLEVEL_DEBUG, fmt.Sprintf("%s : Try to capture packets for the following network interfaces:", configInterface.Description))
+		for _, device := range filteredInterfaces {
+			logMessage(LOGLEVEL_DEBUG, getInterfaceFullName(device))
+		}
+
+		// capturing packets
+		for _, device := range filteredInterfaces {
+			logMessage(LOGLEVEL_INFO, fmt.Sprintf("%s : Starting packet capture on %s...", configInterface.Description, getInterfaceFullName(device)))
+			handle, packetSource, err := captureInterface(device.Name, configInterface.Promiscuous, configInterface.Filter)
+
+			if err != nil {
+				logMessage(LOGLEVEL_ERROR, fmt.Sprintf("%s : %s-%s : Capturing packets - %v", configInterface.Description, device.Name, device.Description, err))
+
+				if handle == nil {
+					continue
+				}
+			}
+
+			currentInterface := listeningInterface{
+				fullname:     getInterfaceFullName(device),
+				device:       device,
+				handle:       handle,
+				packetsource: packetSource,
+			}
+
+			activeInterfaces = append(activeInterfaces, currentInterface)
+			go packetListener(currentInterface, configInterface, quitService)
+		}
+
+		go func() {
+			for {
+				select {
+				case <-quitService:
+					logMessage(LOGLEVEL_INFO, "Received quit signal for network capture routine. Performing cleanup...")
+					for _, iface := range activeInterfaces {
+						if iface.handle != nil {
+							iface.handle.Close()
+							logMessage(LOGLEVEL_INFO, fmt.Sprintf("Closed handle for interface: %s", iface.fullname))
+						}
+					}
+					logMessage(LOGLEVEL_INFO, "Network capture routine stopped.")
+					return
+				case <-time.After(5 * time.Second):
+					if configInterface.Output.API != nil && configInterface.Output.API.Enabled {
+						sendPacketToUrlAddress(configInterface.Output.API.URL, configInterface.Output.API.Headers)
+					}
+				}
+			}
+		}()
+
+	}
 }
 
 func getInterfaceFullName(device pcap.Interface) string {
@@ -37,14 +122,14 @@ func listNetworkInterfaces() (dev []pcap.Interface, err error) {
 	return dev, nil
 }
 
-func captureInterface(deviceName string, isPromiscuous bool, bpfFilter string) (*pcap.Handle, *gopacket.PacketSource, error) {
+func captureInterface(deviceName string, isPromiscuous bool, bpfFilter *string) (*pcap.Handle, *gopacket.PacketSource, error) {
 	handle, err := pcap.OpenLive(deviceName, 65536, isPromiscuous, 10*time.Second)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error opening interface %s: %v", deviceName, err)
 	}
 
-	if bpfFilter != "" {
-		err = handle.SetBPFFilter(strings.TrimSpace(bpfFilter))
+	if bpfFilter != nil && *bpfFilter != "" {
+		err = handle.SetBPFFilter(strings.TrimSpace(*bpfFilter))
 		if err != nil {
 			handle.Close()
 			return nil, nil, fmt.Errorf("BPF filter: %s - %v", err, bpfFilter)
@@ -113,12 +198,12 @@ func packetListener(networkInterface listeningInterface, interfaceParams Interfa
 			}
 
 			// external output
-			if interfaceParams.Output.API.Enabled {
+			if interfaceParams.Output.API != nil && interfaceParams.Output.API.Enabled {
 				normalizedPacket := normalizePacketInformations(networkInterface.fullname, srcIP, dstIP, srcPort, dstPort, protocol, payloadSize, message)
 				messagesQueue = append(messagesQueue, *normalizedPacket)
 			}
 
-			if interfaceParams.Output.File.Enabled {
+			if interfaceParams.Output.File != nil && interfaceParams.Output.File.Enabled {
 				if pcapFile == nil {
 					pcapFile, pcapWriter, err = createPCAPFile(interfaceParams.Description, interfaceParams.Output.File.FilePath, networkInterface.handle.LinkType())
 					if err != nil {
@@ -164,53 +249,59 @@ func packetListener(networkInterface listeningInterface, interfaceParams Interfa
 	}
 }
 
-func createPCAPFile(interfaceDescription string, pcapFilePath string, linkType layers.LinkType) (*os.File, *pcapgo.Writer, error) {
-	slugDescription := slug.Make(interfaceDescription)
-
-	filename := fmt.Sprintf("%s/%s-%s.pcap", pcapFilePath, slugDescription, time.Now().Format("20060102150405"))
-	pcapFile, err := os.Create(filename)
-	if err != nil {
-		return nil, nil, fmt.Errorf("creating pcap file - %v", err)
-	}
-
-	pcapWriter := pcapgo.NewWriter(pcapFile)
-	err = pcapWriter.WriteFileHeader(1024, linkType)
-
-	if err != nil {
-		return nil, nil, fmt.Errorf("writing pcap file header - %v", err)
-	}
-
-	return pcapFile, pcapWriter, nil
-}
-
 func filterInterfaces(devices []pcap.Interface, include InterfaceParams) ([]pcap.Interface, error) {
 	var filteredDevices []pcap.Interface
 
-	if (len(include.Name) == 0 && len(include.IPAddress) == 0) ||
-		(len(include.Name) == 1 && len(include.IPAddress) == 1 && len(include.Name[0]) == 0 && len(include.IPAddress[0]) == 0) {
+	if include.Name == nil && include.IPAddress == nil {
 		return devices, nil
 	}
 
 	for _, device := range devices {
-		for _, name := range include.Name {
+		for _, name := range *include.Name {
 			if len(name) == 0 {
 				continue
 			}
 
-			if strings.Contains(device.Name, name) || strings.Contains(device.Description, name) {
-				filteredDevices = append(filteredDevices, device)
+			if strings.HasPrefix(name, "/") && strings.HasSuffix(name, "/") {
+				// Regular expression match
+				regex, err := regexp.Compile(strings.Trim(name, "/"))
+				if err != nil {
+					return nil, fmt.Errorf("invalid regular expression '%s': %v", name, err)
+				}
+
+				if regex.MatchString(device.Name) || regex.MatchString(device.Description) {
+					filteredDevices = append(filteredDevices, device)
+				}
+			} else {
+				if strings.Contains(device.Name, name) || strings.Contains(device.Description, name) {
+					filteredDevices = append(filteredDevices, device)
+				}
 			}
 		}
 
-		for _, ip := range include.IPAddress {
+		for _, ip := range *include.IPAddress {
 			if len(ip) == 0 {
 				continue
 			}
 
 			for _, addr := range device.Addresses {
-				if strings.Contains(addr.IP.String(), ip) {
-					filteredDevices = append(filteredDevices, device)
+
+				if strings.HasPrefix(ip, "/") && strings.HasSuffix(ip, "/") {
+					// Regular expression match
+					regex, err := regexp.Compile(strings.Trim(ip, "/"))
+					if err != nil {
+						return nil, fmt.Errorf("invalid regular expression '%s': %v", ip, err)
+					}
+
+					if regex.MatchString(addr.IP.String()) {
+						filteredDevices = append(filteredDevices, device)
+					}
+				} else {
+					if strings.Contains(addr.IP.String(), ip) {
+						filteredDevices = append(filteredDevices, device)
+					}
 				}
+
 			}
 		}
 	}

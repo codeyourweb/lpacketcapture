@@ -2,27 +2,18 @@ application_log_level: "LOGLEVEL_INFO"
 application_log_file: ""
 interfaces:
     - capture_description: "capture1"
-      interface_name: 
-              - ""
-      ipaddress:
-              - "192.168.1"
-      promiscuous_mode: false
-      bpf_filter: "udp dst port 53"
+      promiscuous_mode: true
       output:
           file:
               enabled: true
               maxFileSize: 1024
               filePath: "./"
-          api:
-              enabled: false
-              url: ""
-              headers:
-                  X-SEKOIAIO-INTAKE-KEY: ""
+
     - capture_description: "capture2"
       interface_name: 
               - ""
       ipaddress:
-              - "192.168.1"
+              - "/^192\\.168\\.[0-1]\\.[0-9]{1,3}$/"
       promiscuous_mode: false
       bpf_filter: "tcp dst port 443"
       output:
@@ -30,8 +21,9 @@ interfaces:
               enabled: true
               maxFileSize: 1024
               filePath: "./"
-          api:
-              enabled: false
-              url: ""
+          http:
+              enabled: true
+              url: "https://d12sbwqz1wg0000dbg80gotci6cyyyyyb.oast.pro"
               headers:
-                  X-SEKOIAIO-INTAKE-KEY: ""
+                  Authorization: "Bearer YOUR_API_KEY"
+                  MY-CUSTOM-HEADER: "My-Header-Value"
