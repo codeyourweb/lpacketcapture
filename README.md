@@ -56,3 +56,12 @@ You are not familiar with Go?
 * Download the latest build at: https://go.dev/
 * Git clone this repository
 * run *go build -ldflags="-s -w" -o .* to compile it
+
+## Last commit update
+* Refactor configuration management and logging
+* Introduced a new YAML configuration structure, allowing more config parameters for each capture
+* Enhanced network capture functionality in networkcapture.go to support dynamic interface configuration and improved packet handling.
+* Updated logger.go to enhance logging capabilities with new log levels and improved log formatting.
+* Modified externaloutput.go to accept URL and headers as parameters for sending packets to an API.
+* Added support for Windows service management in service_windows.go.
+* Introduced slug generation for PCAP file naming to avoid issues with special characters.

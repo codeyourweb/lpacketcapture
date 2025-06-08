@@ -38,7 +38,7 @@ func normalizePacketInformations(interfaceName string, srcIp string, dstIp strin
 	}
 }
 
-func sendPacketToUrlAddress() error {
+func sendPacketToUrlAddress(url string, headers *map[string]string) error {
 	if len(messagesQueue) == 0 {
 		return nil
 	}
@@ -51,14 +51,16 @@ func sendPacketToUrlAddress() error {
 		return fmt.Errorf("error marshaling packets to JSON: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", config.Output.API.URL, bytes.NewBuffer(packetJSON))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(packetJSON))
 	if err != nil {
 		return fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	for key, value := range config.Output.API.Headers {
-		req.Header.Set(key, value)
+	if headers != nil {
+		for key, value := range *headers {
+			req.Header.Set(key, value)
+		}
 	}
 
 	client := &http.Client{}

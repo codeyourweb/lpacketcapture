@@ -1,0 +1,37 @@
+application_log_level: "LOGLEVEL_INFO"
+application_log_file: ""
+interfaces:
+    - capture_description: "capture1"
+      interface_name: 
+              - ""
+      ipaddress:
+              - "192.168.1"
+      promiscuous_mode: false
+      bpf_filter: "udp dst port 53"
+      output:
+          file:
+              enabled: true
+              maxFileSize: 1024
+              filePath: "./"
+          api:
+              enabled: false
+              url: ""
+              headers:
+                  X-SEKOIAIO-INTAKE-KEY: ""
+    - capture_description: "capture2"
+      interface_name: 
+              - ""
+      ipaddress:
+              - "192.168.1"
+      promiscuous_mode: false
+      bpf_filter: "tcp dst port 443"
+      output:
+          file:
+              enabled: true
+              maxFileSize: 1024
+              filePath: "./"
+          api:
+              enabled: false
+              url: ""
+              headers:
+                  X-SEKOIAIO-INTAKE-KEY: ""
