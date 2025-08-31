@@ -14,7 +14,6 @@ import (
 
 var activeInterfaces []listeningInterface
 var err error
-var computerName string
 
 func main() {
 	// config file argument parsing

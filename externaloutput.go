@@ -31,7 +31,7 @@ type normalizedPacketInformation struct {
 func normalizePacketInformations(interfaceName string, srcIp string, dstIp string, srcPort uint16, dstPort uint16, proto string, pLen int, pData string) *normalizedPacketInformation {
 	return &normalizedPacketInformation{
 		Timestamp:       time.Now().UTC().Format("2006-01-02 15:04:05.000000"),
-		Hostname:        computerName,
+		Hostname:        hostname,
 		InterfaceName:   interfaceName,
 		SourceIP:        srcIp,
 		DestinationIP:   dstIp,

@@ -12,7 +12,6 @@ import (
 
 var activeInterfaces []listeningInterface
 var err error
-var computerName string
 var blockingChannel = make(chan int)
 var quitService chan struct{}
 
