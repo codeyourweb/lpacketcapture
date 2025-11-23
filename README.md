@@ -7,16 +7,15 @@ It implements the gopacket library for capture and offers logging possibilities 
 
 ```
 {
-    "timestamp": "YYYY-MM-DD HH:mm:SS.000000",
+    "additional_data": " (DNS question: mobile.events.data.microsoft.com [A])",
     "hostname": "local_computer_hostname",
     "interface_name": "\\Device\\network_interface_name (network_interface_description)",
-    "source_ip": "192.168.1.0",
+    "source_ip": "192.168.1.1",
     "destination_ip": "1.1.1.1",
-    "source_port": 64315,
+    "payload_size": 78,
+    "source_port": 56568,
     "destination_port": 53,
-    "protocol": "DNS",
-    "payload_size": 16453,
-    "additional_data": ""
+    "protocol": "DNS"
 }
 ```
 
@@ -55,6 +54,7 @@ interfaces:
               filePath: "./"
           http:
               enabled: true
+              ssl_verify: true
               url: "https://<your-api-endpoint>"
               headers:
                   Authorization: "Bearer YOUR_API_KEY"

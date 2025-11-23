@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -43,9 +44,9 @@ func normalizePacketInformations(interfaceName string, srcIp string, dstIp strin
 	}
 }
 
-func sendPacketToUrlAddress(url string, headers *map[string]string) error {
+func sendPacketToUrlAddress(url string, headers *map[string]string, sslVerify bool) (int, error) {
 	if len(messagesQueue) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	sendingQueue := messagesQueue
@@ -53,12 +54,12 @@ func sendPacketToUrlAddress(url string, headers *map[string]string) error {
 
 	packetJSON, err := json.Marshal(sendingQueue)
 	if err != nil {
-		return fmt.Errorf("error marshaling packets to JSON: %v", err)
+		return 0, fmt.Errorf("error marshaling packets to JSON: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(packetJSON))
 	if err != nil {
-		return fmt.Errorf("error creating HTTP request: %v", err)
+		return 0, fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -68,18 +69,24 @@ func sendPacketToUrlAddress(url string, headers *map[string]string) error {
 		}
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: !sslVerify,
+			},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error sending packet to URL: %v", err)
+		return 0, fmt.Errorf("error sending packet to URL: %v", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error response from server: %d - %s", resp.StatusCode, resp.Status)
+	if resp.StatusCode >= 400 {
+		return 0, fmt.Errorf("error response from server: %d - %s", resp.StatusCode, resp.Status)
 	}
 
-	return nil
+	return len(sendingQueue), nil
 }
 
 func createPCAPFile(interfaceDescription string, pcapFilePath string, linkType layers.LinkType) (*os.File, *pcapgo.Writer, error) {

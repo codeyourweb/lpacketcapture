@@ -1,0 +1,30 @@
+application_log_level: "LOGLEVEL_INFO"
+application_log_file: ""
+interfaces:
+    - capture_description: "capture1"
+      promiscuous_mode: true
+      output:
+          file:
+              enabled: true
+              maxFileSize: 1024
+              filePath: "./"
+
+    - capture_description: "capture2"
+      interface_name: 
+              - ""
+      ipaddress:
+              - "/^192\\.168\\.[0-1]\\.[0-9]{1,3}$/"
+      promiscuous_mode: false
+      bpf_filter: "tcp dst port 443"
+      output:
+          file:
+              enabled: true
+              maxFileSize: 1024
+              filePath: "./"
+          http:
+              enabled: true
+              ssl_verify: true
+              url: "https://d12sbwqz1wg0000dbg80gotci6cyyyyyb.oast.pro"
+              headers:
+                  Authorization: "Bearer YOUR_API_KEY"
+                  MY-CUSTOM-HEADER: "My-Header-Value"

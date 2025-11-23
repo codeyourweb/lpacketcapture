@@ -38,9 +38,10 @@ type FileOutput struct {
 }
 
 type APIOutput struct {
-	Enabled bool               `yaml:"enabled"`
-	URL     string             `yaml:"url"`
-	Headers *map[string]string `yaml:"headers"`
+	Enabled   bool               `yaml:"enabled"`
+	SSLVerify bool               `yaml:"ssl_verify"`
+	URL       string             `yaml:"url"`
+	Headers   *map[string]string `yaml:"headers"`
 }
 
 func LoadConfig(configPath string) error {

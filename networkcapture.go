@@ -96,7 +96,12 @@ func networkCaptureRoutine(quitService chan struct{}) {
 					return
 				case <-time.After(5 * time.Second):
 					if configInterface.Output.API != nil && configInterface.Output.API.Enabled {
-						sendPacketToUrlAddress(configInterface.Output.API.URL, configInterface.Output.API.Headers)
+						nbMsg, err := sendPacketToUrlAddress(configInterface.Output.API.URL, configInterface.Output.API.Headers, configInterface.Output.API.SSLVerify)
+						if err != nil {
+							logMessage(LOGLEVEL_ERROR, fmt.Sprintf("Error sending packet to URL: %v", err))
+						} else {
+							logMessage(LOGLEVEL_DEBUG, fmt.Sprintf("Sent %d packets to %s", nbMsg, configInterface.Output.API.URL))
+						}
 					}
 				}
 			}
