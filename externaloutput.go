@@ -31,7 +31,7 @@ type normalizedPacketInformation struct {
 
 func normalizePacketInformations(interfaceName string, srcIp string, dstIp string, srcPort uint16, dstPort uint16, proto string, pLen int, pData string) *normalizedPacketInformation {
 	return &normalizedPacketInformation{
-		Timestamp:       time.Now().UTC().Format("2006-01-02 15:04:05.000000"),
+		Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
 		Hostname:        hostname,
 		InterfaceName:   interfaceName,
 		SourceIP:        srcIp,
@@ -92,7 +92,7 @@ func sendPacketToUrlAddress(url string, headers *map[string]string, sslVerify bo
 func createPCAPFile(interfaceDescription string, pcapFilePath string, linkType layers.LinkType) (*os.File, *pcapgo.Writer, error) {
 	slugDescription := slug.Make(interfaceDescription)
 
-	filename := fmt.Sprintf("%s/%s-%s.pcap", pcapFilePath, slugDescription, time.Now().Format("20060102150405"))
+	filename := fmt.Sprintf("%s/%s-%s.pcap", pcapFilePath, slugDescription, time.Now().UTC().Format("2006-01-02T15-04-05Z"))
 	pcapFile, err := os.Create(filename)
 	if err != nil {
 		return nil, nil, fmt.Errorf("creating pcap file - %v", err)

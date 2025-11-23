@@ -86,7 +86,7 @@ func logMessage(level int, message string) {
 	}
 
 	logEntry := fmt.Sprintf("[%s] [%s] Hostname: %s - Username: %s - ProcessName: %s - PID: %d - Message: %s\n",
-		time.Now().Format("2006-01-02 15:04:05.000000"),
+		time.Now().UTC().Format(time.RFC3339Nano),
 		logPrefix,
 		hostname,
 		username,
